@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GWR by UKH — Live Demo</title>
+  <meta name="description" content="Live watermark removal demo for Gemini AI images. Drag, drop or paste an image to test the algorithm.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080c14;
+      --bg2: #0e1520;
+      --panel: rgba(14, 21, 36, 0.9);
+      --panel2: rgba(20, 30, 50, 0.8);
+      --text: #e8edf7;
+      --muted: #7a8ba8;
+      --line: rgba(100, 140, 220, 0.14);
+      --accent: #4f9cf9;
+      --accent2: #7c5cfc;
+      --accent3: #00e5a0;
+      --danger: #ff5c5c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 15% 10%, rgba(79,156,249,0.1) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 85% 85%, rgba(124,92,252,0.09) 0%, transparent 55%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── NAV ── */
+    nav {
+      background: rgba(8,12,20,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--line);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      box-shadow: 0 0 16px rgba(79,156,249,0.35);
+    }
+    .logo-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .logo-sub { font-size: 12px; color: var(--muted); font-weight: 400; }
+    .nav-right { display: flex; gap: 8px; }
+    .nav-right a {
+      font-size: 13px; font-weight: 600; padding: 7px 14px;
+      border-radius: 9px; text-decoration: none; transition: 0.2s;
+    }
+    .nav-right .ghost { color: var(--muted); border: 1px solid var(--line); }
+    .nav-right .ghost:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    .nav-right .primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      box-shadow: 0 3px 14px rgba(79,156,249,0.3);
+    }
+    .nav-right .primary:hover { box-shadow: 0 6px 22px rgba(79,156,249,0.45); transform: translateY(-1px); }
+
+    /* ── MAIN ── */
+    main { flex: 1; padding: 32px 24px; max-width: 1280px; width: 100%; margin: 0 auto; position: relative; z-index: 1; }
+
+    /* ── UPLOAD ZONE ── */
+    #uploadZone {
+      border: 2px dashed rgba(79,156,249,0.3);
+      border-radius: 22px;
+      padding: 60px 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.25s;
+      background: rgba(79,156,249,0.03);
+      margin-bottom: 28px;
+    }
+    #uploadZone:hover, #uploadZone.drag-over {
+      border-color: var(--accent);
+      background: rgba(79,156,249,0.08);
+    }
+    .upload-icon {
+      width: 72px; height: 72px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(79,156,249,0.2), rgba(124,92,252,0.2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px; margin: 0 auto 20px;
+    }
+    .upload-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .upload-hint { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .upload-formats {
+      display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap;
+    }
+    .format-chip {
+      font-size: 12px; padding: 4px 12px; border-radius: 999px;
+      background: rgba(79,156,249,0.1); border: 1px solid rgba(79,156,249,0.2);
+      color: var(--accent); font-weight: 600;
+    }
+    #fileInput { display: none; }
+
+    /* ── WORKSPACE ── */
+    #workspace { display: none; }
+
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .workspace-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── CANVAS AREA ── */
+    .canvas-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      overflow: hidden;
+      backdrop-filter: blur(16px);
+    }
+    .canvas-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--line);
+    }
+    .canvas-header h3 { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent3); }
+    .canvas-meta { font-size: 12px; color: var(--muted); font-family: monospace; }
+
+    .comparison-wrap {
+      position: relative;
+      background:
+        repeating-conic-gradient(rgba(255,255,255,0.04) 0% 25%, transparent 0% 50%)
+        0 0 / 20px 20px;
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      user-select: none;
+    }
+    #compContainer { position: relative; max-width: 100%; }
+    #originalImage { display: block; max-width: 100%; max-height: 65vh; object-fit: contain; }
+    #processedOverlay {
+      position: absolute; top: 0; left: 0; height: 100%;
+      width: 50%; overflow: hidden;
+      border-right: 2px solid rgba(255,255,255,0.7);
+      box-shadow: 0 0 16px rgba(0,0,0,0.5);
+    }
+    #processedImage { display: block; height: 100%; max-width: none; object-fit: contain; }
+    #sliderHandle {
+      position: absolute; top: 0; bottom: 0; width: 44px;
+      left: 50%; margin-left: -22px;
+      cursor: col-resize;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10;
+    }
+    #sliderHandle .line { width: 2px; height: 100%; background: rgba(255,255,255,0.6); }
+    #sliderHandle .knob {
+      position: absolute;
+      width: 36px; height: 36px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      color: #333; font-size: 14px;
+    }
+    .label-badge {
+      position: absolute; top: 12px;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(6px);
+      color: #fff; font-size: 11px; font-weight: 600;
+      padding: 4px 10px; border-radius: 999px;
+    }
+    .label-after { left: 12px; background: rgba(79,156,249,0.7); }
+    .label-before { right: 12px; }
+
+    /* ── SIDE PANEL ── */
+    .side-panel { display: flex; flex-direction: column; gap: 16px; }
+
+    .panel-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px;
+      backdrop-filter: blur(16px);
+    }
+    .panel-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+
+    /* action buttons */
+    .action-btn {
+      width: 100%; padding: 13px 16px;
+      border-radius: 12px; border: none;
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin-bottom: 10px;
+    }
+    .action-btn:last-child { margin-bottom: 0; }
+    .action-btn:hover { transform: translateY(-1px); }
+    .btn-copy { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; box-shadow: 0 4px 16px rgba(79,156,249,0.3); }
+    .btn-download { background: var(--bg2); color: var(--text); border: 1px solid var(--line); }
+    .btn-download:hover { background: rgba(255,255,255,0.07); }
+    .btn-reset { background: transparent; color: var(--muted); border: 1px solid var(--line); font-size: 13px; }
+    .btn-reset:hover { color: var(--danger); border-color: var(--danger); }
+
+    /* info rows */
+    .info-row { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: var(--muted); }
+    .info-value { font-weight: 600; font-family: monospace; color: var(--text); }
+    .badge-removed { color: var(--accent3); }
+    .badge-skipped { color: #ffa83c; }
+
+    /* adjustments */
+    .slider-wrap { margin-bottom: 12px; }
+    .slider-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .slider-label span:last-child { color: var(--accent); font-weight: 600; }
+    input[type=range] {
+      width: 100%;
+      appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--line);
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(79,156,249,0.5);
+    }
+
+    /* status */
+    #statusMsg { font-size: 13px; color: var(--muted); margin-top: 10px; min-height: 18px; text-align: center; }
+    #statusMsg.success { color: var(--accent3); }
+    #statusMsg.warn { color: #ffa83c; }
+
+    /* ── LOADING OVERLAY ── */
+    #loadingOverlay {
+      position: fixed; inset: 0;
+      background: rgba(8,12,20,0.75);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .spinner {
+      width: 52px; height: 52px;
+      border: 3px solid rgba(79,156,249,0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 14px; color: var(--muted); font-weight: 500; }
+
+    /* footer */
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 20px 24px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      position: relative; z-index: 1;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="./" class="logo">
+      <div class="logo-icon">✦</div>
+      <div>
+        <div class="logo-name">GWR <span style="color:var(--muted);font-weight:400;">by UKH</span></div>
+        <div class="logo-sub">Live Demo Tool</div>
+      </div>
+    </a>
+    <div class="nav-right">
+      <a href="./" class="ghost">← Home</a>
+      <a href="userscript/gemini-watermark-remover.user.js" class="primary">Install Userscript</a>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main>
+
+    <!-- UPLOAD -->
+    <div id="uploadZone">
+      <div class="upload-icon">🖼</div>
+      <div class="upload-title">Drop your Gemini image here</div>
+      <div class="upload-hint">
+        Click to browse, drag &amp; drop, or paste (Ctrl+V) an image to remove its watermark<br>
+        <small>Max 20 MB · Processed 100% in your browser · Never uploaded anywhere</small>
+      </div>
+      <div class="upload-formats">
+        <span class="format-chip">JPG</span>
+        <span class="format-chip">PNG</span>
+        <span class="format-chip">WebP</span>
+      </div>
+      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
+    </div>
+
+    <!-- WORKSPACE -->
+    <div id="workspace">
+      <div class="workspace-grid">
+
+        <!-- LEFT: comparison viewer -->
+        <div class="canvas-card">
+          <div class="canvas-header">
+            <h3><span class="dot"></span> Before / After Comparison</h3>
+            <span class="canvas-meta" id="imageMeta">—</span>
+          </div>
+          <div class="comparison-wrap">
+            <div id="compContainer">
+              <img id="originalImage" draggable="false" alt="Original">
+              <div id="processedOverlay" style="display:none;">
+                <img id="processedImage" draggable="false" alt="Processed">
+              </div>
+              <div id="sliderHandle" style="display:none;">
+                <div class="line"></div>
+                <div class="knob">⇔</div>
+              </div>
+              <span class="label-badge label-after" id="labelAfter" style="display:none;">After</span>
+              <span class="label-badge label-before" id="labelBefore" style="display:none;">Before</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: controls -->
+        <div class="side-panel">
+
+          <!-- Actions -->
+          <div class="panel-card">
+            <div class="panel-title">Actions</div>
+            <button class="action-btn btn-copy" id="copyBtn" style="display:none;">
+              📋 Copy Processed Image
+            </button>
+            <button class="action-btn btn-download" id="downloadBtn" style="display:none;">
+              ⬇ Download as PNG
+            </button>
+            <button class="action-btn btn-reset" id="resetBtn">
+              🔄 Reset / Change Image
+            </button>
+            <div id="statusMsg"></div>
+          </div>
+
+          <!-- Image Info -->
+          <div class="panel-card" id="infoPanel" style="display:none;">
+            <div class="panel-title">Image Info</div>
+            <div class="info-row"><span class="info-label">Filename</span><span class="info-value" id="infoFilename">—</span></div>
+            <div class="info-row"><span class="info-label">Dimensions</span><span class="info-value" id="infoDimensions">—</span></div>
+            <div class="info-row"><span class="info-label">File Size</span><span class="info-value" id="infoFileSize">—</span></div>
+            <div class="info-row"><span class="info-label">Watermark</span><span class="info-value" id="infoWatermark">—</span></div>
+            <div class="info-row"><span class="info-label">Status</span><span class="info-value" id="infoStatus">—</span></div>
+          </div>
+
+          <!-- Image Adjustments -->
+          <div class="panel-card" id="adjustPanel" style="display:none;">
+            <div class="panel-title">Preview Adjustments</div>
+            <div class="slider-wrap">
+              <div class="slider-label"><span>Brightness</span><span id="brightnessVal">100%</span></div>
+              <input type="range" id="brightnessSlider" min="50" max="150" value="100">
+            </div>
+            <div class="slider-wrap">
+              <div class="slider-label"><span>Contrast</span><span id="contrastVal">100%</span></div>
+              <input type="range" id="contrastSlider" min="50" max="150" value="100">
+            </div>
+            <div class="slider-wrap">
+              <div class="slider-label"><span>Saturation</span><span id="saturationVal">100%</span></div>
+              <input type="range" id="saturationSlider" min="0" max="200" value="100">
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <strong style="color:var(--accent)">Gemini Watermark Remover by UKH</strong> &nbsp;·&nbsp;
+    <a href="./">Home</a> &nbsp;·&nbsp;
+    <a href="https://github.com/UKHgit/gemini-watermark-remover" target="_blank" rel="noopener">GitHub</a> &nbsp;·&nbsp;
+    Open Source · MIT License
+  </footer>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">Processing image...</div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // ── Extra UI wiring for new features ──
+
+    // Upload zone interactions
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput  = document.getElementById('fileInput');
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+    uploadZone.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadZone.classList.remove('drag-over');
+      if (e.dataTransfer.files.length) fileInput.files = e.dataTransfer.files, fileInput.dispatchEvent(new Event('change'));
+    });
+
+    // Brightness / Contrast / Saturation live preview on processed image
+    const processedImage = document.getElementById('processedImage');
+    function applyFilters() {
+      const b = document.getElementById('brightnessSlider').value;
+      const c = document.getElementById('contrastSlider').value;
+      const s = document.getElementById('saturationSlider').value;
+      document.getElementById('brightnessVal').textContent = b + '%';
+      document.getElementById('contrastVal').textContent   = c + '%';
+      document.getElementById('saturationVal').textContent = s + '%';
+      processedImage.style.filter = `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
+    }
+    ['brightnessSlider','contrastSlider','saturationSlider'].forEach(id => {
+      document.getElementById(id).addEventListener('input', applyFilters);
+    });
+
+    // Patch reset to also show/hide panels and reset sliders
+    const origReset = window._gwrReset;
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      document.getElementById('workspace').style.display = 'none';
+      document.getElementById('uploadZone').style.display = 'block';
+      document.getElementById('infoPanel').style.display = 'none';
+      document.getElementById('adjustPanel').style.display = 'none';
+      document.getElementById('copyBtn').style.display = 'none';
+      document.getElementById('downloadBtn').style.display = 'none';
+      document.getElementById('processedOverlay').style.display = 'none';
+      document.getElementById('sliderHandle').style.display = 'none';
+      document.getElementById('labelAfter').style.display = 'none';
+      document.getElementById('labelBefore').style.display = 'none';
+      document.getElementById('statusMsg').textContent = '';
+      ['brightnessSlider','contrastSlider','saturationSlider'].forEach(id => {
+        document.getElementById(id).value = id === 'saturationSlider' ? 100 : 100;
+      });
+      applyFilters();
+    });
+
+    // Hook into app.js processSingle to show panels & fill info
+    const _origFileInput = document.getElementById('fileInput');
+    _origFileInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.getElementById('uploadZone').style.display = 'none';
+      document.getElementById('workspace').style.display = 'block';
+      document.getElementById('infoPanel').style.display = 'block';
+      document.getElementById('adjustPanel').style.display = 'block';
+      // Fill quick info
+      document.getElementById('infoFilename').textContent = file.name.length > 18 ? file.name.slice(0,16)+'…' : file.name;
+      document.getElementById('infoFileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+      document.getElementById('infoStatus').textContent = 'Processing…';
+      document.getElementById('labelAfter').style.display = 'none';
+      document.getElementById('labelBefore').style.display = 'none';
+    });
+
+    // After processing finishes (watch for processedOverlay becoming visible)
+    const observer = new MutationObserver(() => {
+      const overlay = document.getElementById('processedOverlay');
+      if (overlay.style.display !== 'none') {
+        document.getElementById('labelAfter').style.display = 'block';
+        document.getElementById('labelBefore').style.display = 'block';
+        document.getElementById('infoStatus').className = 'info-value badge-removed';
+        document.getElementById('infoStatus').textContent = 'Watermark Removed ✓';
+        const img = document.getElementById('originalImage');
+        document.getElementById('infoDimensions').textContent = img.naturalWidth + ' × ' + img.naturalHeight;
+        document.getElementById('imageMeta').textContent = img.naturalWidth + 'x' + img.naturalHeight + ' px';
+      }
+    });
+    observer.observe(document.getElementById('processedOverlay'), { attributes: true, attributeFilter: ['style'] });
+
+    // Show copy/download buttons after process
+    const copyBtn = document.getElementById('copyBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const origCopyDisplay = copyBtn.style.display;
+    new MutationObserver(() => {
+      if (copyBtn.style.display !== 'none') {
+        document.getElementById('infoWatermark').textContent = 'Detected & Removed';
+      }
+    }).observe(copyBtn, { attributes: true, attributeFilter: ['style'] });
+  </script>
+</body>
+</html>
