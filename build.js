@@ -30,14 +30,12 @@ const jsBanner = `/*!
  */`;
 
 const userscriptBanner = `// ==UserScript==
-// @name         Gemini NanoBanana Watermark Remover
-// @name:zh-CN   Gemini NanoBanana 图片水印移除
-// @namespace    https://github.com/GargantuaX
+// @name         Gemini Watermark Remover by UKH
+// @namespace    https://github.com/UKHgit
 // @version      ${pkg.version}
 // @description  Automatically removes watermarks from Gemini AI generated images
-// @description:zh-CN 自动移除 Gemini AI 生成图像中的水印
 // @icon         https://www.google.com/s2/favicons?domain=gemini.google.com
-// @author       GargantuaX
+// @author       UKH
 // @license      MIT
 // @match        https://gemini.google.com/app
 // @match        https://gemini.google.com/app/*
@@ -55,7 +53,7 @@ const userscriptBanner = `// ==UserScript==
 function writeExtensionManifest() {
   const manifest = {
     manifest_version: 3,
-    name: 'Gemini Watermark Remover',
+    name: 'Gemini Watermark Remover by UKH',
     version: pkg.version,
     description: pkg.description,
     author: pkg.author,

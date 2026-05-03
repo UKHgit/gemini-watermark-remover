@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini Watermark Remover by UKH</title>
+  <meta name="description" content="Gemini Watermark Remover by UKH — Automatically remove watermarks from Gemini AI generated images. Install the userscript and get clean, watermark-free images instantly.">
+  <meta name="keywords" content="Gemini watermark remover, AI image watermark, UKH, Tampermonkey userscript">
+  <meta name="author" content="UKH">
+  <meta property="og:title" content="Gemini Watermark Remover by UKH">
+  <meta property="og:description" content="Remove watermarks from Gemini AI generated images automatically.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080c14;
+      --bg2: #0d1220;
+      --panel: rgba(15, 22, 38, 0.85);
+      --text: #e8edf7;
+      --muted: #7a8ba8;
+      --line: rgba(100, 140, 220, 0.15);
+      --accent: #4f9cf9;
+      --accent2: #7c5cfc;
+      --accent3: #00e5a0;
+      --glow: rgba(79, 156, 249, 0.18);
+      --glow2: rgba(124, 92, 252, 0.15);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 10% 10%, rgba(79,156,249,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 90% 80%, rgba(124,92,252,0.1) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(0,229,160,0.05) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Grid pattern */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: linear-gradient(rgba(79,156,249,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79,156,249,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 16px 0;
+      background: rgba(8, 12, 20, 0.8);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    nav .inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 20px rgba(79,156,249,0.4);
+    }
+
+    .logo-text {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .logo-badge {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      background: rgba(79,156,249,0.12);
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(79,156,249,0.25);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 8px 14px;
+      border-radius: 8px;
+      transition: color 0.2s, background 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+
+    .btn-nav {
+      background: linear-gradient(135deg, var(--accent), var(--accent2)) !important;
+      color: #fff !important;
+      font-weight: 600 !important;
+      padding: 8px 18px !important;
+      border-radius: 10px !important;
+      box-shadow: 0 4px 16px rgba(79,156,249,0.3);
+      transition: transform 0.2s, box-shadow 0.2s !important;
+    }
+
+    .btn-nav:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(79,156,249,0.45) !important; }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 100px 0 80px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      background: rgba(79,156,249,0.1);
+      border: 1px solid rgba(79,156,249,0.25);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+      animation: fadeInUp 0.6s ease both;
+    }
+
+    .hero-badge::before { content: '✦'; opacity: 0.7; }
+
+    h1 {
+      font-size: clamp(36px, 6vw, 72px);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 24px;
+      animation: fadeInUp 0.6s 0.1s ease both;
+    }
+
+    h1 .gradient-text {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, var(--accent3) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-desc {
+      font-size: 18px;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 600px;
+      margin: 0 auto 40px;
+      animation: fadeInUp 0.6s 0.2s ease both;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      animation: fadeInUp 0.6s 0.3s ease both;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn:hover { transform: translateY(-2px); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      box-shadow: 0 4px 24px rgba(79,156,249,0.35);
+    }
+
+    .btn-primary:hover { box-shadow: 0 8px 32px rgba(79,156,249,0.5); }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+
+    /* ── STATS STRIP ── */
+    .stats-strip {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      flex-wrap: wrap;
+      padding: 40px 0 60px;
+      border-top: 1px solid var(--line);
+      margin-top: 60px;
+    }
+
+    .stat-item { text-align: center; }
+    .stat-num {
+      font-size: 32px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--accent3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    /* ── FEATURES ── */
+    .section { padding: 80px 0; }
+    .section-label {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(28px, 4vw, 48px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+    .section-desc { font-size: 17px; color: var(--muted); max-width: 540px; line-height: 1.7; }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 48px;
+    }
+
+    .feature-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 28px;
+      backdrop-filter: blur(16px);
+      transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(79,156,249,0.4), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(79,156,249,0.3);
+      box-shadow: 0 12px 40px rgba(79,156,249,0.1);
+    }
+
+    .feature-card:hover::before { opacity: 1; }
+
+    .feature-icon {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      margin-bottom: 18px;
+    }
+
+    .feature-icon.blue { background: rgba(79,156,249,0.15); }
+    .feature-icon.purple { background: rgba(124,92,252,0.15); }
+    .feature-icon.green { background: rgba(0,229,160,0.12); }
+    .feature-icon.orange { background: rgba(255,160,50,0.12); }
+    .feature-icon.pink { background: rgba(255,80,160,0.12); }
+    .feature-icon.cyan { background: rgba(0,220,255,0.12); }
+
+    .feature-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .feature-desc { font-size: 14px; color: var(--muted); line-height: 1.65; }
+
+    /* ── HOW IT WORKS ── */
+    .steps-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0;
+      margin-top: 48px;
+      position: relative;
+    }
+
+    .steps-row::before {
+      content: '';
+      position: absolute;
+      top: 36px;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+      opacity: 0.4;
+    }
+
+    .step {
+      text-align: center;
+      padding: 0 20px;
+      position: relative;
+    }
+
+    .step-num {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-size: 22px;
+      font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+      box-shadow: 0 0 24px rgba(79,156,249,0.4);
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .step-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* ── CTA PANEL ── */
+    .cta-panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: 60px 40px;
+      text-align: center;
+      backdrop-filter: blur(20px);
+      position: relative;
+      overflow: hidden;
+      margin: 60px 0;
+    }
+
+    .cta-panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 60% at 30% 50%, rgba(79,156,249,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 70% 50%, rgba(124,92,252,0.07) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .cta-panel h2 {
+      font-size: clamp(26px, 4vw, 42px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .cta-panel p { font-size: 16px; color: var(--muted); margin-bottom: 32px; position: relative; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 36px 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      position: relative;
+      z-index: 1;
+    }
+
+    footer strong { color: var(--accent); }
+    footer a { color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    footer a:hover { color: var(--text); }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 600px) {
+      .stats-strip { gap: 24px; }
+      .steps-row::before { display: none; }
+      .cta-panel { padding: 40px 24px; }
+      .nav-links .hide-mobile { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="inner">
+      <a href="/" class="logo">
+        <div class="logo-icon">✦</div>
+        <span class="logo-text">GWR <span style="color:var(--muted);font-weight:400;">by UKH</span></span>
+      </a>
+      <div class="nav-links">
+        <a href="#features" class="hide-mobile">Features</a>
+        <a href="#how-it-works" class="hide-mobile">How It Works</a>
+        <a href="./dev-preview.html">Try Demo</a>
+        <a href="userscript/gemini-watermark-remover.user.js" class="btn-nav">Install Userscript</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero container">
+    <div class="hero-badge">Gemini Watermark Remover · by UKH</div>
+    <h1>Remove Gemini AI<br><span class="gradient-text">Watermarks Instantly</span></h1>
+    <p class="hero-desc">
+      A powerful Tampermonkey userscript that automatically detects and removes watermarks from Gemini AI-generated images — copy, download, and share clean images with one click.
+    </p>
+    <div class="hero-actions">
+      <a href="userscript/gemini-watermark-remover.user.js" class="btn btn-primary">
+        ⬇ Install Userscript
+      </a>
+      <a href="./dev-preview.html" class="btn btn-secondary">
+        🖼 Try Live Demo
+      </a>
+      <a href="https://github.com/UKHgit/gemini-watermark-remover" target="_blank" rel="noopener" class="btn btn-secondary">
+        ⭐ GitHub
+      </a>
+    </div>
+
+    <div class="stats-strip">
+      <div class="stat-item">
+        <div class="stat-num">100%</div>
+        <div class="stat-label">Client-Side Processing</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">0ms</div>
+        <div class="stat-label">Server Roundtrip</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">3</div>
+        <div class="stat-label">Supported Formats</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">MIT</div>
+        <div class="stat-label">Open Source</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="section" id="features">
+    <div class="container">
+      <span class="section-label">Features</span>
+      <h2 class="section-title">Everything you need,<br>nothing you don't</h2>
+      <p class="section-desc">Built with advanced reverse alpha-blending algorithms to perfectly restore Gemini AI images.</p>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon blue">🔬</div>
+          <div class="feature-title">Precision Detection</div>
+          <div class="feature-desc">Advanced watermark detection using spatial and gradient analysis — finds and targets the exact watermark region every time.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon purple">⚡</div>
+          <div class="feature-title">Real-Time Processing</div>
+          <div class="feature-desc">Watermarks are removed the moment Gemini loads your image — no waiting, no extra steps, fully automatic.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon green">📋</div>
+          <div class="feature-title">One-Click Copy</div>
+          <div class="feature-desc">Copy the processed image directly to your clipboard — paste it anywhere without saving a file first.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon orange">💾</div>
+          <div class="feature-title">Full-Size Download</div>
+          <div class="feature-desc">Download the full-resolution watermark-free image as PNG with Gemini's native download flow — no quality loss.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon pink">🔒</div>
+          <div class="feature-title">100% Private</div>
+          <div class="feature-desc">All processing happens in your browser. No images are ever uploaded to any server. Your data stays yours.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon cyan">🖼</div>
+          <div class="feature-title">Before/After Preview</div>
+          <div class="feature-desc">Use the interactive slider to compare original and processed images side-by-side in the demo tool.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section" id="how-it-works">
+    <div class="container">
+      <span class="section-label">How It Works</span>
+      <h2 class="section-title">Up and running in minutes</h2>
+      <p class="section-desc">Install once, remove watermarks forever — completely hands-free after setup.</p>
+
+      <div class="steps-row">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-title">Install Tampermonkey</div>
+          <div class="step-desc">Add the Tampermonkey extension to Chrome, Firefox, or Edge from your browser's extension store.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-title">Install Userscript</div>
+          <div class="step-desc">Click "Install Userscript" above and confirm in Tampermonkey to add the GWR script.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-title">Open Gemini</div>
+          <div class="step-desc">Navigate to gemini.google.com and generate any image — the script activates automatically.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-title">Copy or Download</div>
+          <div class="step-desc">Hit the copy or download button — your image is watermark-free and full resolution.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="container">
+    <div class="cta-panel">
+      <h2>Ready to remove watermarks?</h2>
+      <p>Install the userscript in seconds and start getting clean images from Gemini AI right now.</p>
+      <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+        <a href="userscript/gemini-watermark-remover.user.js" class="btn btn-primary">⬇ Install Now — It's Free</a>
+        <a href="./dev-preview.html" class="btn btn-secondary">🖼 Try the Demo Tool</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <p style="margin-bottom:10px;">
+        <strong>Gemini Watermark Remover by UKH</strong> &nbsp;·&nbsp;
+        <a href="https://github.com/UKHgit/gemini-watermark-remover" target="_blank" rel="noopener">GitHub</a> &nbsp;·&nbsp;
+        <a href="./dev-preview.html">Demo</a> &nbsp;·&nbsp;
+        <a href="userscript/gemini-watermark-remover.user.js">Userscript</a>
+      </p>
+      <p>Open-source · MIT License · Built with ♥ for the Gemini AI community</p>
+    </div>
+  </footer>
+
+</body>
+</html>
